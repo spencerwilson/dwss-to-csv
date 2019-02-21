@@ -1,0 +1,163 @@
+{
+  "InitiationFees": [
+    {
+      "name": "PSA Text"
+    },
+    {
+      "name": "Perner",
+      "type": "perner"
+    },
+    {
+      "name": "SSN",
+      "type": "ssn"
+    },
+    {
+      "name": "Last Name"
+    },
+    {
+      "name": "First Name"
+    },
+    {
+      "name": "Address"
+    },
+    {
+      "name": "2nd Address",
+      "optional": true
+    },
+    {
+      "name": "City"
+    },
+    {
+      "name": "State"
+    },
+    {
+      "name": "Zip"
+    },
+    {
+      "name": "Telephone #"
+    },
+    {
+      "name": "Gross",
+      "type": "currency"
+    },
+    {
+      "name": "Base",
+      "type": "currency"
+    },
+    {
+      "name": "Local"
+    },
+    {
+      "name": "Initiation Fee",
+      "type": "currency"
+    }
+  ],
+  "AllEmployees": [
+    {
+      "name": "PSA Text"
+    },
+    {
+      "name": "Perner",
+      "type": "perner"
+    },
+    {
+      "name": "SSN",
+      "type": "ssn"
+    },
+    {
+      "name": "Last Name"
+    },
+    {
+      "name": "First Name"
+    },
+    {
+      "name": "Address"
+    },
+    {
+      "name": "2nd Address",
+      "optional": true
+    },
+    {
+      "name": "City"
+    },
+    {
+      "name": "State"
+    },
+    {
+      "name": "Zip"
+    },
+    {
+      "name": "Telephone #"
+    },
+    {
+      "name": "Gross",
+      "type": "currency"
+    },
+    {
+      "name": "Base",
+      "type": "currency"
+    },
+    {
+      "name": "Wage Type"
+    },
+    {
+      "name": "Amount",
+      "type": "currency"
+    }
+  ],
+  "DuesDeducted": [
+    {
+      "name": "PSA Text"
+    },
+    {
+      "name": "Perner",
+      "type": "perner"
+    },
+    {
+      "name": "New SSN",
+      "type": "ssn"
+    },
+    {
+      "name": "Last Name"
+    },
+    {
+      "name": "First Name"
+    },
+    {
+      "name": "CC"
+    },
+    {
+      "name": "BA"
+    },
+    {
+      "name": "PA Text"
+    },
+    {
+      "name": "PSA"
+    },
+    {
+      "name": "ESG"
+    },
+    {
+      "name": "PA"
+    },
+    {
+      "name": "Cost Center"
+    },
+    {
+      "name": "EEWT"
+    },
+    {
+      "name": "Contrib EE",
+      "type": "currency"
+    },
+    {
+      "name": "EE Amt",
+      "type": "currency"
+    },
+    {
+      "name": "EE %",
+      "type": "percentage"
+    }
+  ]
+}

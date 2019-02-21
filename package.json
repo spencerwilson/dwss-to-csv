@@ -1,0 +1,26 @@
+{
+  "name": "dwss-to-csv",
+  "version": "0.1.0-m1.rc1",
+  "description": "Extract clean data out of DWSS Excel workbooks",
+  "main": "src/index.js",
+  "scripts": {
+    "acceptance-tests": "./test.sh",
+    "pkg": "pkg -t node10-win-x64 -o dwss_to_csv.exe src/index.js"
+  },
+  "keywords": [],
+  "author": "Spencer Wilson",
+  "license": "MIT",
+  "dependencies": {
+    "cfb": "^1.1.0",
+    "csv-stringify": "^5.3.0",
+    "inquirer": "^6.2.2",
+    "progress": "^2.0.3",
+    "sax": "^1.2.4",
+    "winston": "^3.2.1",
+    "xlsx": "^0.14.1",
+    "yargs": "^13.2.1"
+  },
+  "devDependencies": {
+    "pkg": "^4.3.7"
+  }
+}
