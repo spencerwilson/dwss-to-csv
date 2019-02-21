@@ -1,5 +1,7 @@
 res
 
+*.exe
+
 # Logs
 logs
 *.log

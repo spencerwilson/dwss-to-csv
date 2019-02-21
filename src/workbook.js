@@ -176,7 +176,8 @@ function inferYearMonth(sheetNames) {
 }
 
 exports.formatCsvName = function formatCsvName(wb, wbPath, dataset) {
-  const namePrefix = `DWSS_${dataset.description}`;
+  const description = dataset.toString().match(/\((.*)\)/)[1];
+  const namePrefix = `DWSS_${description}`;
   const partialResult = {
     dir: path.dirname(wbPath),
     // name: filled in below
