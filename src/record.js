@@ -1,3 +1,5 @@
+const { logger } = require('./logging');
+
 const CURRENCY_FORMATTER = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
@@ -18,34 +20,48 @@ exports.matches = (schema) => (candidate) => {
     switch (column.type || 'string') {
       case 'string':
         if (typeof candidateValue !== 'string') {
+          logger.warn(`omitting record: ${JSON.stringify(candidate)}`);
+          logger.warn(`reason: column ${column.name} type mismatch: expected string, saw ${typeof candidateValue}`);
           return false;
         }
         break;
       case 'perner':
         if (typeof candidateValue !== 'string') {
+          logger.warn(`omitting record: ${JSON.stringify(candidate)}`);
+          logger.warn(`reason: column ${column.name} type mismatch: expected string, saw ${typeof candidateValue}`);
           return false;
         }
 
         if (!candidateValue.match(/^\d{8}$/)) {
+          logger.warn(`omitting record: ${JSON.stringify(candidate)}`);
+          logger.warn(`reason: column ${column.name} structure mismatch: expected 8 digits, saw "${candidateValue}"`);
           return false;
         }
         break;
       case 'ssn':
         if (typeof candidateValue !== 'string') {
+          logger.warn(`omitting record: ${JSON.stringify(candidate)}`);
+          logger.warn(`reason: column ${column.name} type mismatch: expected string, saw ${typeof candidateValue}`);
           return false;
         }
 
         if (!candidateValue.match(/^\d{3}-\d{2}-\d{4}$/)) {
+          logger.warn(`omitting record: ${JSON.stringify(candidate)}`);
+          logger.warn(`reason: column ${column.name} structure mismatch: expected nnn-nn-nnnn, saw "${candidateValue}"`);
           return false;
         }
         break;
       case 'currency':
         if (typeof candidateValue !== 'number') {
+          logger.warn(`omitting record: ${JSON.stringify(candidate)}`);
+          logger.warn(`reason: column ${column.name} type mismatch: expected number, saw ${typeof candidateValue}`);
           return false;
         }
         break;
       case 'percentage':
         if (typeof candidateValue !== 'number') {
+          logger.warn(`omitting record: ${JSON.stringify(candidate)}`);
+          logger.warn(`reason: column ${column.name} type mismatch: expected number, saw ${typeof candidateValue}`);
           return false;
         }
         break;

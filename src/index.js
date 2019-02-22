@@ -13,6 +13,7 @@ const decrypt = require('./decrypt');
 const Logging = require('./logging');
 const logger = Logging.logger;
 const Record = require('./record');
+const Utils = require('./utils');
 const Workbook = require('./workbook');
 
 const MANIFEST = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf-8'));
@@ -61,12 +62,14 @@ async function main() {
 
   let errorOccurred = false;
   for (const wbPath of workbookPaths) {
-    Logging.changeWorkbook(wbPath);
+    Logging.createWorkbookLogger(wbPath);
+    Logging.changeLogger(wbPath);
+
     try {
       await processWorkbook(wbPath);
     } catch (err) {
       errorOccurred = true;
-      logger.error(err.message);
+      logger.error(err.stack);
     }
 
     completed++;
@@ -76,15 +79,22 @@ async function main() {
     });
   }
 
-  // Signal the end of logging, and await its persistence.
-  const logsWritten = util.promisify(logger.on.bind(logger))('finish');
-  logger.end();
-  await logsWritten;
+  // Needed because the attempt to await the closing of all loggers
+  // below doesn't seem to work :( Without this, sometimes only
+  // some of the logs are printed
+  await new Promise((resolve) => setTimeout(resolve, 300));
 
-  // Dump info or higher logs to stdout
-  console.log('\n==== Summary Logs ====\n');
+  // Dump logs to stdout
+  console.log('\n==== Logs ====\n');
   for (const wbPath of workbookPaths) {
-    Logging.dumpWorkbookLogs(wbPath);
+    Logging.changeLogger(wbPath);
+
+    // Signal the end of logging, and await its persistence.
+    logsWritten = new Promise(resolve => logger.on('finish', resolve));
+    logger.end();
+    await logsWritten;
+
+    await Logging.printWorkbookLogs(wbPath);
   }
 }
 
@@ -97,7 +107,7 @@ async function main() {
  *        Rejects if
  */
 async function processWorkbook(wbPath) {
-  logger.info(`Starting workbook: ${wbPath}`);
+  logger.info(`WORKBOOK: ${wbPath}`);
 
   const wb = await deserializeWorkbook(wbPath);
   bar.tick();
@@ -111,11 +121,14 @@ async function processWorkbook(wbPath) {
     logger.debug(`Year/month inference result: ${year}, ${month}`);
   }
 
-  Array.from(Workbook.correspondence(wb)).forEach((entry) => {
+  const correspondence = Workbook.correspondence(wb);
+  logger.info(`Dataset-to-sheet correspondence: ${Utils.serialize(correspondence)}`);
+
+  Array.from(correspondence).forEach((entry) => {
     const dataset = entry[0];
-    logger.debug(`Considering dataset: ${dataset.toString()}`);
     const csvFileName = Workbook.formatCsvName(yearMonthInference, wbPath, dataset);
 
+    entry[1].sheet = wb.Sheets[entry[1].sheetName];
     const formattedRecords = processDataset(entry);
 
     writeCsv(csvFileName, formattedRecords);
@@ -144,7 +157,7 @@ async function deserializeWorkbook(wbPath) {
   try {
     wbCfb = CFB.parse(wbBuffer, {});
   } catch (err) {
-    logger.error(`Failed to parse file as CFB or ZIP: ${err.message}`);
+    logger.error(`Failed to parse file as CFB or ZIP: ${err.stack}`);
     throw err;
   }
 
@@ -154,7 +167,7 @@ async function deserializeWorkbook(wbPath) {
     try {
       wbBuffer = await decrypt(wbCfb, PASSWORD);
     } catch (err) {
-      logger.error(`Decryption failed: ${err.message}`);
+      logger.error(`Decryption failed: ${err.stack}`);
     }
   }
 
@@ -162,10 +175,9 @@ async function deserializeWorkbook(wbPath) {
 
   let result;
   try {
-    debugger;
     result = XLSX.read(wbBuffer, { type: 'buffer' });
   } catch (err) {
-    logger.error(`Workbook parse failed. Wrong password? Message: ${err.message}`);
+    logger.error(`Workbook parse failed. Wrong password? ${err.stack}`);
   }
 
   return result;
@@ -197,6 +209,8 @@ async function passwordPromptIfNecessary() {
  *        An entry from Workbook.correspondence.
  */
 function processDataset([dataset, { sheet, headersResult }]) {
+  logger.info();
+  logger.info(`DATASET: ${Utils.description(dataset)}`);
   // TODO: Handle when the workbook lacks a dataset
   const schema = Workbook.SCHEMA[dataset];
   const allRows = XLSX.utils.sheet_to_json(sheet, {range: headersResult.headerRow});

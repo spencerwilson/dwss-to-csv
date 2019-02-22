@@ -39,14 +39,16 @@ function isDataset(dataset, map) {
 exports.correspondence = function correspondence(wb) {
   const result = new Map();
   const remainingDatasets = new Set(Object.values(Datasets));
+  debugger;
 
-  nextSheet: for (const sheet of Object.values(wb.Sheets)) {
+  nextSheet: for (const sheetName of Object.keys(wb.Sheets)) {
+    const sheet = wb.Sheets[sheetName];
     // TODO: Handle when there are no headers
     const headersResult = findHeaders(sheet);
 
     for (const dataset of remainingDatasets) {
       if (isDataset(dataset, headersResult.columns)) {
-        result.set(dataset, { sheet, headersResult });
+        result.set(dataset, { sheetName, headersResult });
         remainingDatasets.delete(dataset);
         continue nextSheet;
       }
@@ -54,7 +56,8 @@ exports.correspondence = function correspondence(wb) {
   }
 
   if (remainingDatasets.size !== 0) {
-    logger.warn(`Datasets not found: ${Array.from(remainingDatasets).map(d => d.toString()).join(', ')}`);
+    logger.warn(`Datasets not found: ${Utils.serialize(remainingDatasets)}`);
+    logger.warn('Either the password (if any) was wrong, or the workbook is laid out differently');
   }
 
   // TODO make placeholder for non-found datasets?

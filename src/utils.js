@@ -12,3 +12,24 @@ exports.symbolMirror = function symbolMirror(names) {
   }, {});
 }
 
+function description(s) {
+  return s.toString().match(/Symbol\((.*)\)/)[1];
+}
+exports.description = description;
+
+exports.serialize = function serialize(mapOrSet) {
+  if (mapOrSet instanceof Map) {
+    const mappings = Array.from(mapOrSet).map(([k, v]) => {
+      if (k.constructor === Symbol) k = description(k);
+      if (v.constructor === Symbol) v = description(v);
+
+      return `${k} => ${v.sheetName}`;
+    });
+    return JSON.stringify(mappings, null, 2);
+  } else if (mapOrSet instanceof Set) {
+    return Array.from(mapOrSet).map(v => {
+      if (v.constructor === Symbol) v = description(v);
+      return v;
+    }).join(', ');
+  }
+}
