@@ -13,6 +13,8 @@ const decrypt = require('./decrypt');
 const Record = require('./record');
 const Workbook = require('./workbook');
 
+const MANIFEST = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+
 // Write-once, the first time a password-protected workbook is encountered.
 let PASSWORD;
 
@@ -30,6 +32,7 @@ async function main() {
       nargs: 1,
       type: 'string',
     })
+    .version(MANIFEST.version)
     .example('$0 -p hunter2 DWSS_Reference.xlsx', 'Process the given workbook using password "hunter2"')
     .example('$0 a.xlsx b.xlsx c.xlsx', 'Extract CSVs from many workbooks all at once')
     .argv;
