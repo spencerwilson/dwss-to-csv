@@ -53,6 +53,10 @@ exports.correspondence = function correspondence(wb) {
     }
   }
 
+  if (remainingDatasets.size !== 0) {
+    logger.warn(`Datasets not found: ${Array.from(remainingDatasets).map(d => d.toString()).join(', ')}`);
+  }
+
   // TODO make placeholder for non-found datasets?
 
   return result;

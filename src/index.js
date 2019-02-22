@@ -15,7 +15,7 @@ const logger = Logging.logger;
 const Record = require('./record');
 const Workbook = require('./workbook');
 
-const MANIFEST = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+const MANIFEST = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf-8'));
 
 // Write-once, the first time a password-protected workbook is encountered.
 let PASSWORD;
@@ -59,9 +59,15 @@ async function main() {
     all: workbookPaths.length,
   });
 
+  let errorOccurred = false;
   for (const wbPath of workbookPaths) {
     Logging.changeWorkbook(wbPath);
-    await processWorkbook(wbPath);
+    try {
+      await processWorkbook(wbPath);
+    } catch (err) {
+      errorOccurred = true;
+      logger.error(err.message);
+    }
 
     completed++;
     bar.tick({
@@ -70,8 +76,16 @@ async function main() {
     });
   }
 
-  logger.on('finish', () => {});
+  // Signal the end of logging, and await its persistence.
+  const logsWritten = util.promisify(logger.on.bind(logger))('finish');
   logger.end();
+  await logsWritten;
+
+  // Dump info or higher logs to stdout
+  console.log('\n==== Summary Logs ====\n');
+  for (const wbPath of workbookPaths) {
+    Logging.dumpWorkbookLogs(wbPath);
+  }
 }
 
 /**
@@ -94,12 +108,12 @@ async function processWorkbook(wbPath) {
     logger.warn(`Year/month inference failed: ${yearMonthInference.message}`);
   } else {
     const { year, month } = yearMonthInference.value;
-    logger.info(`Year/month inference result: ${year}, ${month}`);
+    logger.debug(`Year/month inference result: ${year}, ${month}`);
   }
 
   Array.from(Workbook.correspondence(wb)).forEach((entry) => {
     const dataset = entry[0];
-    logger.info(`Starting ${dataset.toString()}`);
+    logger.debug(`Considering dataset: ${dataset.toString()}`);
     const csvFileName = Workbook.formatCsvName(yearMonthInference, wbPath, dataset);
 
     const formattedRecords = processDataset(entry);
@@ -126,16 +140,35 @@ async function deserializeWorkbook(wbPath) {
   //   - an encrypted ECMA-376 document, packaged in a CFB in accord
   //     with MS-OFFCRYPTO.
   //   - an unencrypted, ZIP-packaged ECMA-376 document.
-  const wbCfb = CFB.parse(wbBuffer, {});
+  let wbCfb;
+  try {
+    wbCfb = CFB.parse(wbBuffer, {});
+  } catch (err) {
+    logger.error(`Failed to parse file as CFB or ZIP: ${err.message}`);
+    throw err;
+  }
+
   const isEncrypted = Boolean(CFB.find(wbCfb, '/EncryptedPackage'));
 
   if (isEncrypted) {
-    wbBuffer = await decrypt(wbCfb, PASSWORD);
+    try {
+      wbBuffer = await decrypt(wbCfb, PASSWORD);
+    } catch (err) {
+      logger.error(`Decryption failed: ${err.message}`);
+    }
   }
 
   bar.tick();
 
-  return XLSX.read(wbBuffer, { type: 'buffer' });
+  let result;
+  try {
+    debugger;
+    result = XLSX.read(wbBuffer, { type: 'buffer' });
+  } catch (err) {
+    logger.error(`Workbook parse failed. Wrong password? Message: ${err.message}`);
+  }
+
+  return result;
 }
 
 /**
@@ -187,5 +220,6 @@ function writeCsv(filename, formattedRecords) {
     recordDelimiter: '\r\n',
   });
 
+  logger.info(`Writing CSV: ${filename}, records: ${formattedRecords.length}`);
   fs.writeFileSync(filename, output, 'utf-8');
 }
