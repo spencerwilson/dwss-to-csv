@@ -3,6 +3,7 @@ const path = require('path');
 
 const XLSX = require('xlsx');
 
+const { logger } = require('./logging');
 const Utils = require('./utils');
 
 // Object<String, Dataset>
@@ -129,7 +130,7 @@ const MONTHS = [
  * @params {Array<String>} sheetNames
  * @returns {Result<(Year, Month)>}
  */
-function inferYearMonth(sheetNames) {
+exports.inferYearMonth = function inferYearMonth(sheetNames) {
   //find a sheet name that contains a \d{4}, and use it
   // Scan the sheet names and infer that the first sequence of 4 digits
   // that's found is the year.
@@ -175,7 +176,7 @@ function inferYearMonth(sheetNames) {
   };
 }
 
-exports.formatCsvName = function formatCsvName(wb, wbPath, dataset) {
+exports.formatCsvName = function formatCsvName(inferenceResult, wbPath, dataset) {
   const description = dataset.toString().match(/\((.*)\)/)[1];
   const namePrefix = `DWSS_${description}`;
   const partialResult = {
@@ -183,8 +184,6 @@ exports.formatCsvName = function formatCsvName(wb, wbPath, dataset) {
     // name: filled in below
     ext: '.csv',
   };
-
-  const inferenceResult = inferYearMonth(wb.SheetNames);
 
   if (inferenceResult.kind === 'failure') {
     return path.format(Object.assign(partialResult, {

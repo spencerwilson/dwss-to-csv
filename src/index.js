@@ -10,6 +10,8 @@ const XLSX = require('xlsx');
 const yargs = require('yargs');
 
 const decrypt = require('./decrypt');
+const Logging = require('./logging');
+const logger = Logging.logger;
 const Record = require('./record');
 const Workbook = require('./workbook');
 
@@ -58,6 +60,7 @@ async function main() {
   });
 
   for (const wbPath of workbookPaths) {
+    Logging.changeWorkbook(wbPath);
     await processWorkbook(wbPath);
 
     completed++;
@@ -66,6 +69,9 @@ async function main() {
       all: workbookPaths.length,
     });
   }
+
+  logger.on('finish', () => {});
+  logger.end();
 }
 
 /**
@@ -77,13 +83,24 @@ async function main() {
  *        Rejects if
  */
 async function processWorkbook(wbPath) {
+  logger.info(`Starting workbook: ${wbPath}`);
+
   const wb = await deserializeWorkbook(wbPath);
   bar.tick();
+
   const sheets = Object.values(wb.Sheets);
+  const yearMonthInference = Workbook.inferYearMonth(wb.SheetNames);
+  if (yearMonthInference.kind === 'failure') {
+    logger.warn(`Year/month inference failed: ${yearMonthInference.message}`);
+  } else {
+    const { year, month } = yearMonthInference.value;
+    logger.info(`Year/month inference result: ${year}, ${month}`);
+  }
 
   Array.from(Workbook.correspondence(wb)).forEach((entry) => {
     const dataset = entry[0];
-    const csvFileName = Workbook.formatCsvName(wb, wbPath, dataset);
+    logger.info(`Starting ${dataset.toString()}`);
+    const csvFileName = Workbook.formatCsvName(yearMonthInference, wbPath, dataset);
 
     const formattedRecords = processDataset(entry);
 
