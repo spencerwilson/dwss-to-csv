@@ -10,6 +10,7 @@ const XLSX = require('xlsx');
 const yargs = require('yargs');
 
 const decrypt = require('./decrypt');
+const { FailureKind } = require('./constants');
 const Logging = require('./logging');
 const logger = Logging.logger;
 const Record = require('./record');
@@ -215,9 +216,27 @@ function processDataset([dataset, { sheet, headersResult }]) {
   const schema = Workbook.SCHEMA[dataset];
   const allRows = XLSX.utils.sheet_to_json(sheet, {range: headersResult.headerRow});
 
+  let invalidCount = 0;
+  let invalidPernerCount = 0;
+
   const formattedRecords = allRows
-    .filter(Record.matches(schema))
+    .filter((r) => {
+      const result = Record.matches(schema)(r);
+
+      if (result.failure) {
+        if (result.column === 'Perner') {
+          invalidPernerCount++;
+        }
+        invalidCount++;
+        return false;
+      }
+
+      return result;
+    })
     .map(Record.format(schema));
+
+  const logFn = (invalidCount > invalidPernerCount) ? logger.warn : logger.info;
+  logFn(`Results: ${invalidCount} invalid row${invalidCount > 1 ? 's' : ''} (${invalidPernerCount} due to invalid Perner)`);
 
   return formattedRecords;
 }

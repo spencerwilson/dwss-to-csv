@@ -1,3 +1,4 @@
+const { FailureKind } = require('./constants');
 const { logger } = require('./logging');
 
 const CURRENCY_FORMATTER = new Intl.NumberFormat('en-US', {
@@ -6,72 +7,97 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat('en-US', {
 });
 
 /**
+ * @param {Function} predicate
+ * @param {Array<*>} arr
+ * @returns {Array<*>}
+ *        A shallow copy of the given array, with the first element
+ *        satisfying the given predicate moved to the front of the
+ *        array.
+ */
+function moveToFront(predicate, arr) {
+  arr = [].concat(arr);
+
+  const i = arr.findIndex(predicate);
+  const [el] = arr.splice(i, 1);
+  arr.unshift(el);
+
+  return arr;
+}
+
+/**
  * @returns {Boolean}
  *        True iff the given candidate record conforms to the given schema.
  */
-exports.matches = (schema) => (candidate, i) => {
-  return schema.every((column) => {
-    const candidateValue = candidate[column.name];
+exports.matches = (schema) => (candidate) => {
+  // Ensure perner check is the first check performed,
+  // since invalid perners are treated specially upstream.
+  schema = moveToFront((s) => s.type === 'perner', schema);
 
-    if (column.optional && !Boolean(candidateValue)) {
-      return true;
+  for (const columnSchema of schema) {
+    const result = checkColumn(columnSchema, candidate);
+    if (result.failure) {
+      return result;
     }
+  }
 
-    switch (column.type || 'string') {
-      case 'string':
-        if (typeof candidateValue !== 'string') {
-          logger.warn(`omitting ${i}: ${JSON.stringify(candidate)}`);
-          logger.warn(`reason: column ${column.name} type mismatch: expected string, saw ${typeof candidateValue}`);
-          return false;
-        }
-        break;
-      case 'perner':
-        if (typeof candidateValue !== 'string') {
-          logger.warn(`omitting ${i}: ${JSON.stringify(candidate)}`);
-          logger.warn(`reason: column ${column.name} type mismatch: expected string, saw ${typeof candidateValue}`);
-          return false;
-        }
-
-        if (!candidateValue.match(/^\d{8}$/)) {
-          logger.warn(`omitting ${i}: ${JSON.stringify(candidate)}`);
-          logger.warn(`reason: column ${column.name} structure mismatch: expected 8 digits, saw "${candidateValue}"`);
-          return false;
-        }
-        break;
-      case 'ssn':
-        if (typeof candidateValue !== 'string') {
-          logger.warn(`omitting ${i}: ${JSON.stringify(candidate)}`);
-          logger.warn(`reason: column ${column.name} type mismatch: expected string, saw ${typeof candidateValue}`);
-          return false;
-        }
-
-        if (!candidateValue.match(/^\d{3}-\d{2}-\d{4}$/)) {
-          logger.warn(`omitting ${i}: ${JSON.stringify(candidate)}`);
-          logger.warn(`reason: column ${column.name} structure mismatch: expected nnn-nn-nnnn, saw "${candidateValue}"`);
-          return false;
-        }
-        break;
-      case 'currency':
-        if (typeof candidateValue !== 'number') {
-          logger.warn(`omitting ${i}: ${JSON.stringify(candidate)}`);
-          logger.warn(`reason: column ${column.name} type mismatch: expected number, saw ${typeof candidateValue}`);
-          return false;
-        }
-        break;
-      case 'percentage':
-        if (typeof candidateValue !== 'number') {
-          logger.warn(`omitting ${i}: ${JSON.stringify(candidate)}`);
-          logger.warn(`reason: column ${column.name} type mismatch: expected number, saw ${typeof candidateValue}`);
-          return false;
-        }
-        break;
-      default:
-        throw new Error('Unknown column type: ' + column.type);
-    }
-
-    return true;
-  });
+  return { failure: false };
 };
+
+function checkColumn(column, candidate) {
+  const candidateValue = candidate[column.name];
+
+  if (column.optional && !Boolean(candidateValue)) {
+    return true;
+  }
+
+  function validationError(failureKind, expected) {
+    const error = {
+      failure: true,
+      kind: failureKind,
+      column: column.name,
+    };
+
+    switch (failureKind) {
+      case FailureKind.TYPE_ERROR:
+        error.message = `Column ${column} type mismatch: expected ${expected}, got ${typeof candidateValue}`;
+        break;
+      case FailureKind.STRUCTURE:
+        break;
+    }
+
+    return error;
+  }
+
+  switch (column.type || 'string') {
+    case 'string':
+      if (typeof candidateValue !== 'string') return validationError(FailureKind.TYPE, 'string');
+      break;
+    case 'perner':
+      if (typeof candidateValue !== 'string') return validationError(FailureKind.TYPE, 'string');
+
+      if (!candidateValue.match(/^\d{8}$/)) {
+        return validationError(FailureKind.STRUCTURE, '8 digits');
+      }
+      break;
+    case 'ssn':
+      if (typeof candidateValue !== 'string') return validationError(FailureKind.TYPE, 'string');
+
+      if (!candidateValue.match(/^\d{3}-\d{2}-\d{4}$/)) {
+        return validationError(FailureKind.STRUCTURE, 'nnn-nn-nnnn');
+      }
+      break;
+    case 'currency':
+      if (typeof candidateValue !== 'number') return validationError(FailureKind.TYPE, 'number');
+      break;
+    case 'percentage':
+      if (typeof candidateValue !== 'number') return validationError(FailureKind.TYPE, 'number');
+      break;
+    default:
+      throw new Error('Unknown column type: ' + column.type);
+  }
+
+  return { failure: false };
+}
 
 /**
  * @returns {Array}
