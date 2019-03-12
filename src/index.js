@@ -70,7 +70,7 @@ async function main() {
       await processWorkbook(wbPath);
     } catch (err) {
       errorOccurred = true;
-      logger.error(err.stack);
+      setImmediate(() => logger.error(err.stack));
     }
 
     completed++;
@@ -80,23 +80,8 @@ async function main() {
     });
   }
 
-  // Needed because the attempt to await the closing of all loggers
-  // below doesn't seem to work :( Without this, sometimes only
-  // some of the logs are printed
+  // Allow the logs to [almost surely] be flushed to disk.
   await new Promise((resolve) => setTimeout(resolve, 300));
-
-  // Dump logs to stdout
-  console.log('\n==== Logs ====\n');
-  for (const wbPath of workbookPaths) {
-    Logging.changeLogger(wbPath);
-
-    // Signal the end of logging, and await its persistence.
-    logsWritten = new Promise(resolve => logger.on('finish', resolve));
-    logger.end();
-    await logsWritten;
-
-    await Logging.printWorkbookLogs(wbPath);
-  }
 }
 
 /**
@@ -116,7 +101,7 @@ async function processWorkbook(wbPath) {
   const sheets = Object.values(wb.Sheets);
   const yearMonthInference = Workbook.inferYearMonth(wb.SheetNames);
   if (yearMonthInference.kind === 'failure') {
-    logger.warn(`Year/month inference failed: ${yearMonthInference.message}`);
+    logger.warning(`Year/month inference failed: ${yearMonthInference.message}`);
   } else {
     const { year, month } = yearMonthInference.value;
     logger.debug(`Year/month inference result: ${year}, ${month}`);
@@ -130,7 +115,7 @@ async function processWorkbook(wbPath) {
     const csvFileName = Workbook.formatCsvName(yearMonthInference, wbPath, dataset);
 
     entry[1].sheet = wb.Sheets[entry[1].sheetName];
-    const formattedRecords = processDataset(entry);
+    const formattedRecords = processDataset(entry, csvFileName);
 
     writeCsv(csvFileName, formattedRecords);
   });
@@ -204,14 +189,12 @@ async function passwordPromptIfNecessary() {
 }
 
 /**
- * @param {String} 
- *        The absolute path of the CSV to be saved.
  * @param {Array}
  *        An entry from Workbook.correspondence.
+ * @param {String}
+ *        The absolute path of the CSV to be saved.
  */
-function processDataset([dataset, { sheet, headersResult }]) {
-  logger.info();
-  logger.info(`DATASET: ${Utils.description(dataset)}`);
+function processDataset([dataset, { sheet, headersResult }], csvFileName) {
   // TODO: Handle when the workbook lacks a dataset
   const schema = Workbook.SCHEMA[dataset];
   const allRows = XLSX.utils.sheet_to_json(sheet, {range: headersResult.headerRow});
@@ -231,12 +214,22 @@ function processDataset([dataset, { sheet, headersResult }]) {
         return false;
       }
 
-      return result;
+      return true;
     })
     .map(Record.format(schema));
 
-  const logFn = (invalidCount > invalidPernerCount) ? logger.warn : logger.info;
-  logFn(`Results: ${invalidCount} invalid row${invalidCount > 1 ? 's' : ''} (${invalidPernerCount} due to invalid Perner)`);
+  // Log async so as not to come in during the middle of the progress bar!
+  if (invalidCount > invalidPernerCount) {
+    setImmediate(() => {
+      logger.warning(`${Utils.description(dataset)}: ${invalidCount} record${invalidCount > 1 ? 's' : ''} omitted (${invalidPernerCount} due to invalid Perner)`);
+      const logFile = path.join(logger.transports[1].dirname, logger.transports[1].filename);
+      logger.warning(`Check the log file: ${logFile}`);
+    });
+  } else {
+    setImmediate(() => {
+      logger.info(`${Utils.description(dataset)}: ${invalidCount} record${invalidCount > 1 ? 's' : ''} omitted (${invalidPernerCount} due to invalid Perner)`);
+    });
+  }
 
   return formattedRecords;
 }

@@ -14,9 +14,11 @@ exports.logger = new Proxy({}, {
 });
 
 function getLogName(wbPath) {
+  const parsed = path.parse(wbPath);
+
   return path.format({
-    dir: process.cwd(),
-    name: path.parse(wbPath).name,
+    dir: parsed.dir,
+    name: parsed.name,
     ext: '.log',
   });
 }
@@ -30,14 +32,19 @@ function getCurrentLogger() {
  */
 exports.createWorkbookLogger = function createWorkbookLogger(wbPath) {
   winston.loggers.add(wbPath, {
-    level: 'debug',
-    format: winston.format.combine(
-      winston.format.simple(),
-      winston.format.colorize(),
-    ),
+    levels: winston.config.syslog.levels,
     transports: [
+      new winston.transports.Console({
+        level: 'warning',
+        format: winston.format.combine(
+          winston.format.colorize(),
+          winston.format.simple(),
+        ),
+      }),
       new winston.transports.File({
+        level: 'debug',
         filename: getLogName(wbPath),
+        format: winston.format.simple(),
         options: {
           // Overwrite any existing log file
           flags: 'w',

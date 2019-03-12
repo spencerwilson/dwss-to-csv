@@ -6,6 +6,8 @@ const XLSX = require('xlsx');
 const { logger } = require('./logging');
 const Utils = require('./utils');
 
+// TODO: Make the logs in this file async
+
 // Object<String, Dataset>
 const Datasets = Utils.symbolMirror([
   'AllEmployees',
@@ -56,8 +58,8 @@ exports.correspondence = function correspondence(wb) {
   }
 
   if (remainingDatasets.size !== 0) {
-    logger.warn(`Datasets not found: ${Utils.serialize(remainingDatasets)}`);
-    logger.warn('Either the password (if any) was wrong, or the workbook is laid out differently');
+    logger.warning(`Datasets not found: ${Utils.serialize(remainingDatasets)}`);
+    logger.warning('Either the password (if any) was wrong, or the workbook is laid out differently');
   }
 
   // TODO make placeholder for non-found datasets?
