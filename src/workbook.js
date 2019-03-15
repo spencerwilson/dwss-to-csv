@@ -6,8 +6,6 @@ const XLSX = require('xlsx');
 const { logger } = require('./logging');
 const Utils = require('./utils');
 
-// TODO: Make the logs in this file async
-
 // Object<String, Dataset>
 const Datasets = Utils.symbolMirror([
   'AllEmployees',
@@ -44,8 +42,11 @@ exports.correspondence = function correspondence(wb) {
 
   nextSheet: for (const sheetName of Object.keys(wb.Sheets)) {
     const sheet = wb.Sheets[sheetName];
-    // TODO: Handle when there are no headers
     const headersResult = findHeaders(sheet);
+    if (!headersResult) {
+      logger.warning(`Couldn't find headers for sheet "${sheetName}"`);
+      continue;
+    }
 
     for (const dataset of remainingDatasets) {
       if (isDataset(dataset, headersResult.columns)) {
@@ -58,10 +59,8 @@ exports.correspondence = function correspondence(wb) {
 
   if (remainingDatasets.size !== 0) {
     logger.warning(`Datasets not found: ${Utils.serialize(remainingDatasets)}`);
-    logger.warning('Either the password (if any) was wrong, or the workbook is laid out differently');
+    logger.warning('Either the password (if any) was wrong, or the workbook is laid out differently from the reference workbook');
   }
-
-  // TODO make placeholder for non-found datasets?
 
   return result;
 }
@@ -74,6 +73,7 @@ function findHeaders(sheet) {
 
   // The first row for whom a majority of cells have non-empty string values...
   let headerRow;
+  let foundHeaderRow = false;
   for (headerRow of Utils.range(range.s.r, range.e.r + 1)) {
     const stringCellCount = Array.from(cellsInRow(sheet, headerRow)).reduce((count, cell) => {
       if (cell && cell.t === 's' && cell.v.length !== 0) {
@@ -84,8 +84,13 @@ function findHeaders(sheet) {
 
     const majorityOfCellsAreStrings = (stringCellCount / cellsPerRow) > 0.5;
     if (majorityOfCellsAreStrings) {
+      foundHeaderRow = true;
       break;
     }
+  }
+
+  if (!foundHeaderRow) {
+    return null;
   }
 
   const columns = Array.from(cellsInRow(sheet, headerRow)).reduce((map, cell, i) => {

@@ -97,7 +97,11 @@ async function main() {
  * @param {String} wbPath
  *        Absolute path to a workbook.
  * @returns {Promise}
- *        TODO describe rejection and fulfillment.
+ *        Rejects with an error if
+ *          - workbook deserialization fails,
+ *          - CSV writing fails, or
+ *          - some other exception occurs.
+ *        Fulfills otherwise.
  */
 async function processWorkbook(wbPath) {
   logger.info(`WORKBOOK: ${wbPath}`);
@@ -145,7 +149,7 @@ async function deserializeWorkbook(wbPath) {
     wbBuffer = await util.promisify(fs.readFile)(wbPath);
   } catch (err) {
     logger.error(`Failed to read file: ${err.stack}`);
-    logger.error('Does the file exist?');
+    logger.error('Does the file exist? Do you have permission to open it?');
     throw err;
   }
 
@@ -212,7 +216,6 @@ async function passwordPromptIfNecessary() {
  *        The absolute path of the CSV to be saved.
  */
 function processDataset([dataset, { sheet, headersResult }], csvFileName) {
-  // TODO: Handle when the workbook lacks a dataset
   const schema = Workbook.SCHEMA[dataset];
   const allRows = XLSX.utils.sheet_to_json(sheet, {range: headersResult.headerRow});
 
@@ -263,5 +266,11 @@ function writeCsv(filename, formattedRecords) {
   });
 
   logger.info(`Writing CSV: ${filename}, records: ${formattedRecords.length}`);
-  fs.writeFileSync(filename, output, 'utf-8');
+  try {
+    fs.writeFileSync(filename, output, 'utf-8');
+  } catch (err) {
+    logger.error(`Writing CSV failed: ${err.stack}`);
+    logger.error('Do you have permission to write files to this location?');
+    throw err;
+  }
 }

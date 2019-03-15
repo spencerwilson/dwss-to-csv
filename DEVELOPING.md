@@ -34,4 +34,4 @@ npm run acceptance-tests -- "<workbook password to be used for all test workbook
 
 ## Releasing
 
-TODO: Configure Travis CI to build Windows builds.
+Run `npm run build`, publish, and tag the resulting ZIP archive.
