@@ -87,7 +87,7 @@ async function main() {
   }
 
   // Allow time for logs to [almost surely] be done flushing to disk.
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await new Promise((resolve) => setTimeout(resolve, 500));
 }
 
 /**
