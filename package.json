@@ -1,11 +1,12 @@
 {
   "name": "dwss-to-csv",
-  "version": "0.1.0-m1.rc2",
+  "version": "0.1.0-m2.rc1",
   "description": "Extract clean data out of DWSS Excel workbooks",
   "main": "src/index.js",
   "scripts": {
     "acceptance-tests": "./test.sh",
-    "pkg": "pkg -t node10-win-x64 -o dwss_to_csv.exe src/index.js"
+    "pkg": "pkg -t node10-win-x64 -o dwss_to_csv.exe src/index.js",
+    "build": "rm -f dwss_to_csv.{zip,exe} && npm run pkg && zip dwss_to_csv-$(jq -r .version < package.json).zip dwss_to_csv.exe dwss_to_csv.bat"
   },
   "keywords": [],
   "author": "Spencer Wilson",
