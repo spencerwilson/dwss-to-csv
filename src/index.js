@@ -19,7 +19,7 @@ const Workbook = require('./workbook');
 
 const MANIFEST = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf-8'));
 
-// Write-once, the first time a password-protected workbook is encountered.
+// Write-once.
 let PASSWORD;
 
 let bar;
@@ -69,7 +69,8 @@ async function main() {
     try {
       await processWorkbook(wbPath);
     } catch (err) {
-      logger.error(err.stack);
+      logger.error(`Processing failed for workbook: ${wbPath}`);
+      bar.tick(2);
     }
 
     completed++;
@@ -139,7 +140,14 @@ async function processWorkbook(wbPath) {
  *        Fulfills otherwise with the deserialized workbook.
  */
 async function deserializeWorkbook(wbPath) {
-  let wbBuffer = await util.promisify(fs.readFile)(wbPath);
+  let wbBuffer;
+  try {
+    wbBuffer = await util.promisify(fs.readFile)(wbPath);
+  } catch (err) {
+    logger.error(`Failed to read file: ${err.stack}`);
+    logger.error('Does the file exist?');
+    throw err;
+  }
 
   // Assumption: A workbook file is either
   //   - an encrypted ECMA-376 document, packaged in a CFB in accord
@@ -149,7 +157,8 @@ async function deserializeWorkbook(wbPath) {
   try {
     wbCfb = CFB.parse(wbBuffer, {});
   } catch (err) {
-    logger.error(`Failed to parse file as CFB or ZIP: ${err.stack}`);
+    logger.error(`Failed to parse ${wbPath} as CFB or ZIP: ${err.stack}`);
+    logger.error('Is it a valid Excel workbook?');
     throw err;
   }
 
@@ -169,7 +178,8 @@ async function deserializeWorkbook(wbPath) {
   try {
     result = XLSX.read(wbBuffer, { type: 'buffer' });
   } catch (err) {
-    logger.error(`Workbook parse failed. Wrong password? ${err.stack}`);
+    logger.error(`Workbook parse failed.${err.stack}`);
+    logger.error('Is it a valid Excel workbook? Is the password correct?');
   }
 
   return result;
