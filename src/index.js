@@ -48,6 +48,7 @@ async function main() {
   await passwordPromptIfNecessary();
 
   const workbookPaths = argv._.map((p) => path.resolve(p));
+
   bar = new ProgressBar('[:bar] :percent || :completed/:all || :eta seconds remaining', {
     total: workbookPaths.length * 3,
     width: 40,
@@ -61,7 +62,6 @@ async function main() {
     all: workbookPaths.length,
   });
 
-  let errorOccurred = false;
   for (const wbPath of workbookPaths) {
     Logging.createWorkbookLogger(wbPath);
     Logging.changeLogger(wbPath);
@@ -69,8 +69,7 @@ async function main() {
     try {
       await processWorkbook(wbPath);
     } catch (err) {
-      errorOccurred = true;
-      setImmediate(() => logger.error(err.stack));
+      logger.error(err.stack);
     }
 
     completed++;
@@ -80,7 +79,14 @@ async function main() {
     });
   }
 
-  // Allow the logs to [almost surely] be flushed to disk.
+  // Now that the progress bar is done, flush any logger transports
+  // that seem to be buffered.
+  for (const wbPath of workbookPaths) {
+    Logging.changeLogger(wbPath);
+    logger.transports.forEach((t) => t.flush && t.flush());
+  }
+
+  // Allow time for logs to [almost surely] be done flushing to disk.
   await new Promise((resolve) => setTimeout(resolve, 300));
 }
 
@@ -90,7 +96,7 @@ async function main() {
  * @param {String} wbPath
  *        Absolute path to a workbook.
  * @returns {Promise}
- *        Rejects if
+ *        TODO describe rejection and fulfillment.
  */
 async function processWorkbook(wbPath) {
   logger.info(`WORKBOOK: ${wbPath}`);
@@ -104,7 +110,7 @@ async function processWorkbook(wbPath) {
     logger.warning(`Year/month inference failed: ${yearMonthInference.message}`);
   } else {
     const { year, month } = yearMonthInference.value;
-    logger.debug(`Year/month inference result: ${year}, ${month}`);
+    logger.info(`Year/month inference result: ${year}, ${month}`);
   }
 
   const correspondence = Workbook.correspondence(wb);
@@ -182,6 +188,7 @@ async function passwordPromptIfNecessary() {
 
   const answers = await inquirer.prompt([{
     name: 'password',
+    type: 'password',
     message: 'Password to use for protected workbooks:',
   }]);
 
@@ -203,7 +210,7 @@ function processDataset([dataset, { sheet, headersResult }], csvFileName) {
   let invalidPernerCount = 0;
 
   const formattedRecords = allRows
-    .filter((r) => {
+    .filter((r, i) => {
       const result = Record.matches(schema)(r);
 
       if (result.failure) {
@@ -211,6 +218,10 @@ function processDataset([dataset, { sheet, headersResult }], csvFileName) {
           invalidPernerCount++;
         }
         invalidCount++;
+
+        logger.info(`Omitted record: ${JSON.stringify(r)}`);
+        logger.info(`...reason: ${result.message}`);
+
         return false;
       }
 
@@ -218,17 +229,12 @@ function processDataset([dataset, { sheet, headersResult }], csvFileName) {
     })
     .map(Record.format(schema));
 
-  // Log async so as not to come in during the middle of the progress bar!
   if (invalidCount > invalidPernerCount) {
-    setImmediate(() => {
-      logger.warning(`${Utils.description(dataset)}: ${invalidCount} record${invalidCount > 1 ? 's' : ''} omitted (${invalidPernerCount} due to invalid Perner)`);
-      const logFile = path.join(logger.transports[1].dirname, logger.transports[1].filename);
-      logger.warning(`Check the log file: ${logFile}`);
-    });
+    logger.warning(`${Utils.description(dataset)}: ${invalidCount} record${invalidCount > 1 ? 's' : ''} omitted (${invalidPernerCount} due to invalid Perner)`);
+    const logFile = path.join(logger.transports[1].dirname, logger.transports[1].filename);
+    logger.warning(`Check the log file: ${logFile}`);
   } else {
-    setImmediate(() => {
-      logger.info(`${Utils.description(dataset)}: ${invalidCount} record${invalidCount > 1 ? 's' : ''} omitted (${invalidPernerCount} due to invalid Perner)`);
-    });
+    logger.info(`${Utils.description(dataset)}: ${invalidCount} record${invalidCount > 1 ? 's' : ''} omitted (${invalidPernerCount} due to invalid Perner)`);
   }
 
   return formattedRecords;

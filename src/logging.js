@@ -3,6 +3,9 @@ const path = require('path');
 const util = require('util');
 
 const winston = require('winston');
+
+const bufferTransport = require('./buffer_transport');
+
 let currentLoggerId;
 
 // An object that acts like a winston.Logger, but the particular logger
@@ -34,13 +37,13 @@ exports.createWorkbookLogger = function createWorkbookLogger(wbPath) {
   winston.loggers.add(wbPath, {
     levels: winston.config.syslog.levels,
     transports: [
-      new winston.transports.Console({
+      bufferTransport(new winston.transports.Console({
         level: 'warning',
         format: winston.format.combine(
           winston.format.colorize(),
           winston.format.simple(),
         ),
-      }),
+      })),
       new winston.transports.File({
         level: 'debug',
         filename: getLogName(wbPath),

@@ -41,7 +41,6 @@ function isDataset(dataset, map) {
 exports.correspondence = function correspondence(wb) {
   const result = new Map();
   const remainingDatasets = new Set(Object.values(Datasets));
-  debugger;
 
   nextSheet: for (const sheetName of Object.keys(wb.Sheets)) {
     const sheet = wb.Sheets[sheetName];

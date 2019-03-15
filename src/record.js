@@ -58,10 +58,11 @@ function checkColumn(column, candidate) {
     };
 
     switch (failureKind) {
-      case FailureKind.TYPE_ERROR:
-        error.message = `Column ${column} type mismatch: expected ${expected}, got ${typeof candidateValue}`;
+      case FailureKind.TYPE:
+        error.message = `Column "${column.name}" type mismatch: expected ${expected}, got ${typeof candidateValue}`;
         break;
       case FailureKind.STRUCTURE:
+        error.message = `Column "${column.name}" structure mismatch: expected ${expected}, got "${candidate[column.name]}"`;
         break;
     }
 
