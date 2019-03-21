@@ -203,6 +203,7 @@ async function passwordPromptIfNecessary() {
   const answers = await inquirer.prompt([{
     name: 'password',
     type: 'password',
+    mask: '*',
     message: 'Password to use for protected workbooks:',
   }]);
 
