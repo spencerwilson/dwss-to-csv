@@ -21,7 +21,7 @@ function getLogName(wbPath) {
 
   return path.format({
     dir: parsed.dir,
-    name: parsed.name,
+    name: parsed.name + '-LOG',
     ext: '.log',
   });
 }
