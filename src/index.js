@@ -140,6 +140,7 @@ async function processWorkbook(wbPath) {
     const formattedRecords = processDataset(entry, csvFileName);
 
     writeCsv(csvFileName, formattedRecords);
+    logger.info(`========== Completed: ${Utils.description(dataset)} ==========`);
   });
 }
 
@@ -226,10 +227,12 @@ async function passwordPromptIfNecessary() {
  *        An entry from Workbook.correspondence.
  * @param {String}
  *        The absolute path of the CSV to be saved.
+ * @returns {Array}
+ *        Records.
  */
 function processDataset([dataset, { sheet, headersResult }], csvFileName) {
   logger.info();
-  logger.info(`PROCESSING DATASET: ${Utils.description(dataset)}`);
+  logger.info(`========== Starting dataset: ${Utils.description(dataset)} ==========`);
   const schema = Workbook.SCHEMA[dataset];
   const allRows = XLSX.utils.sheet_to_json(sheet, {range: headersResult.headerRow});
 
@@ -263,8 +266,6 @@ function processDataset([dataset, { sheet, headersResult }], csvFileName) {
   } else {
     logger.info(`${Utils.description(dataset)}: ${invalidCount} record${invalidCount > 1 ? 's' : ''} omitted (${invalidPernerCount} due to invalid Perner)`);
   }
-
-  logger.info(`Completed processing: ${Utils.description(dataset)}`);
 
   return formattedRecords;
 }
