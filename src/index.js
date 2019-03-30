@@ -217,6 +217,8 @@ async function passwordPromptIfNecessary() {
  *        The absolute path of the CSV to be saved.
  */
 function processDataset([dataset, { sheet, headersResult }], csvFileName) {
+  logger.info();
+  logger.info(`PROCESSING DATASET: ${Utils.description(dataset)}`);
   const schema = Workbook.SCHEMA[dataset];
   const allRows = XLSX.utils.sheet_to_json(sheet, {range: headersResult.headerRow});
 
@@ -250,6 +252,8 @@ function processDataset([dataset, { sheet, headersResult }], csvFileName) {
   } else {
     logger.info(`${Utils.description(dataset)}: ${invalidCount} record${invalidCount > 1 ? 's' : ''} omitted (${invalidPernerCount} due to invalid Perner)`);
   }
+
+  logger.info(`Completed processing: ${Utils.description(dataset)}`);
 
   return formattedRecords;
 }
