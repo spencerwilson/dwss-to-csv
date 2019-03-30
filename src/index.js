@@ -44,10 +44,11 @@ async function main() {
       .example('$0 a.xlsx b.xlsx c.xlsx', 'Extract CSVs from many workbooks all at once')
       .argv;
   } catch (err) {
+    console.error('This program is meant to be used by dragging and dropping Excel files (workbooks) onto the batch (.bat) file.');
     await inquirer.prompt([{
       type: 'input',
       name: 'exiting',
-      message: 'Press Enter to exit.',
+      message: 'Please try again by dragging Excel files onto the batch file. To close this window, press Enter.',
     }]);
     process.exit(1);
   }
