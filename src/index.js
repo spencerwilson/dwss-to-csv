@@ -27,19 +27,30 @@ let bar;
 main();
 
 async function main() {
-  const argv = yargs
-    .usage('Usage: $0 <file> [...]')
-    .demandCommand(1, 'You need to provide at least one Excel workbook to process.')
-    .option('p', {
-      alias: 'password',
-      describe: 'Password used to read password-protected workbooks',
-      nargs: 1,
-      type: 'string',
-    })
-    .version(MANIFEST.version)
-    .example('$0 -p hunter2 DWSS_Reference.xlsx', 'Process the given workbook using password "hunter2"')
-    .example('$0 a.xlsx b.xlsx c.xlsx', 'Extract CSVs from many workbooks all at once')
-    .argv;
+  let argv;
+  try {
+    argv = yargs
+      .usage('Usage: $0 <file> [...]')
+      .exitProcess(false)
+      .demandCommand(1, 'You need to provide at least one Excel workbook to process.')
+      .option('p', {
+        alias: 'password',
+        describe: 'Password used to read password-protected workbooks',
+        nargs: 1,
+        type: 'string',
+      })
+      .version(MANIFEST.version)
+      .example('$0 -p hunter2 DWSS_Reference.xlsx', 'Process the given workbook using password "hunter2"')
+      .example('$0 a.xlsx b.xlsx c.xlsx', 'Extract CSVs from many workbooks all at once')
+      .argv;
+  } catch (err) {
+    await inquirer.prompt([{
+      type: 'input',
+      name: 'exiting',
+      message: 'Press Enter to exit.',
+    }]);
+    process.exit(1);
+  }
 
   if (argv.password) {
     PASSWORD = argv.password;
