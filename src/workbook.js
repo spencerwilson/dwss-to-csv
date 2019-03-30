@@ -190,27 +190,27 @@ exports.inferYearMonth = function inferYearMonth(sheetNames) {
 }
 
 exports.formatCsvName = function formatCsvName(inferenceResult, wbPath, dataset) {
-  const description = dataset.toString().match(/\((.*)\)/)[1];
-  const namePrefix = `DWSS_${description}`;
   const partialResult = {
     dir: path.dirname(wbPath),
     // name: filled in below
     ext: '.csv',
   };
 
+  const description = dataset.toString().match(/\((.*)\)/)[1];
+
+  let name;
   if (inferenceResult.kind === 'failure') {
-    return path.format(Object.assign(partialResult, {
-      name: namePrefix + '_' + path.basename(wbPath),
-    }));
+    name = `DWSS_${description}_${path.basename(wbPath)}`;
+  } else {
+    const { year, month } = inferenceResult.value;
+
+    name = [
+      'DWSS',
+      year.toString(),
+      month.toString().padStart(2, '0'),
+      description,
+    ].join('_');
   }
-
-  const { year, month } = inferenceResult.value;
-
-  const name = [
-    namePrefix,
-    year.toString(),
-    month.toString().padStart(2, '0'),
-  ].join('_');
 
   return path.format(Object.assign(partialResult, { name }));
 };
