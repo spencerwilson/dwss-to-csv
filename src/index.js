@@ -263,11 +263,11 @@ function processDataset([dataset, { sheet, headersResult }], csvFileName) {
     .map(Record.format(schema));
 
   if (invalidCount > invalidPernerCount) {
-    logger.warning(`${Utils.description(dataset)}: ${invalidCount} record${invalidCount > 1 ? 's' : ''} omitted (${invalidPernerCount} due to invalid Perner)`);
+    logger.warning(`${Utils.description(dataset)}: ${invalidCount} record${invalidCount > 1 ? 's' : ''} omitted (${invalidCount - invalidPernerCount} of which for interesting reasons)`);
     const logFile = path.join(logger.transports[1].dirname, logger.transports[1].filename);
     logger.warning(`Check the log file: ${logFile}`);
   } else {
-    logger.info(`${Utils.description(dataset)}: ${invalidCount} record${invalidCount > 1 ? 's' : ''} omitted (${invalidPernerCount} due to invalid Perner)`);
+    logger.info(`${Utils.description(dataset)}: ${invalidCount} record${invalidCount > 1 ? 's' : ''} omitted (${invalidCount - invalidPernerCount} of which for interesting reasons)`);
   }
 
   return formattedRecords;
