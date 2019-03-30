@@ -84,6 +84,9 @@ async function main() {
       bar.tick(2);
     }
 
+    logger.info();
+    logger.info('Workbook processing complete');
+
     completed++;
     bar.tick({
       completed,
