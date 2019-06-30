@@ -53,6 +53,10 @@ async function main() {
     process.exit(1);
   }
 
+  if (argv.version || argv.help) {
+    process.exit(0);
+  }
+
   if (argv.password) {
     PASSWORD = argv.password;
   }
