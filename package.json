@@ -1,6 +1,6 @@
 {
   "name": "dwss-to-csv",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Extract clean data out of DWSS Excel workbooks",
   "main": "src/index.js",
   "scripts": {
